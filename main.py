@@ -1,5 +1,11 @@
 # pyrefly: ignore [missing-import]
 from fastapi import FastAPI
+from dotenv import load_dotenv
+import os
+
+# Load the .env file so we can securely access our GROQ_API_KEY
+load_dotenv()
+
 import models
 from database import engine
 from routers import auth_router, product_router

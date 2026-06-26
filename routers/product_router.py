@@ -1,5 +1,5 @@
 # pyrefly: ignore [missing-import]
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 # pyrefly: ignore [missing-import]
@@ -10,13 +10,15 @@ from routers.auth_router import get_current_user, get_db
 from cache import get_cache, set_cache, invalidate_cache
 # pyrefly: ignore [missing-import]
 from decorators import time_logger
+# pyrefly: ignore [missing-import]
+from services import ai_service
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 # 1. CREATE A PRODUCT
 @router.post("/", response_model=schemas.ProductResponse, status_code=201)
 @time_logger  # <--- Our Custom Decorator constraint!
-def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def create_product(product: schemas.ProductCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     new_product = models.Product(
         owner_id=current_user.id,
         name=product.name,
@@ -31,6 +33,9 @@ def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)
     
     # Invalidate the cache so the user sees this new product next time they look!
     invalidate_cache(f"products_{current_user.id}")
+    
+    # Send the AI generation to the background!
+    background_tasks.add_task(ai_service.generate_product_details, db, new_product.id)
     
     return new_product
 
