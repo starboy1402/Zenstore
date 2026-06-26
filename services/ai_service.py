@@ -26,7 +26,7 @@ async def generate_product_details(db, product_id: int):
             prompt = f"Write a catchy 2-sentence description and give a 1-word category for this product: {product.name}. Description: {product.raw_description}"
             
             completion = client.chat.completions.create(
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
             )

@@ -40,6 +40,8 @@ class ProductResponse(BaseModel):
     raw_description: Optional[str]
     ai_description: Optional[str]
     category: Optional[str]
+    image_path: Optional[str] = None
+    image_metadata: Optional[dict] = None
     status: str
 
     class Config:
