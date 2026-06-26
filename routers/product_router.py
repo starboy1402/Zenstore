@@ -14,6 +14,10 @@ from decorators import time_logger
 from services import ai_service
 # pyrefly: ignore [missing-import]
 from services import image_service
+# pyrefly: ignore [missing-import]
+from services import csv_service
+import uuid
+import os
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -87,3 +91,40 @@ def upload_product_image(
     invalidate_cache(f"products_{current_user.id}")
     
     return product
+
+# 4. UPLOAD CSV FILE
+@router.post("/bulk-upload", status_code=status.HTTP_202_ACCEPTED)
+def upload_products_csv(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Must be a CSV file")
+        
+    # 1. Save the file to disk temporarily
+    os.makedirs("uploads/csv", exist_ok=True)
+    filepath = f"uploads/csv/{uuid.uuid4().hex}.csv"
+    with open(filepath, "wb") as buffer:
+        buffer.write(file.file.read())
+        
+    # 2. Create the Job Tracker in the Database
+    job = models.BatchJob(owner_id=current_user.id, filename=file.filename)
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    
+    # 3. Send the slow parsing task to the background!
+    background_tasks.add_task(csv_service.process_csv_upload, filepath, job.id, current_user.id, db)
+    
+    return {"message": "Upload started", "job_id": job.id}
+
+# 5. CHECK JOB STATUS
+@router.get("/bulk-upload/{job_id}")
+def get_batch_job_status(job_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    job = db.query(models.BatchJob).filter(models.BatchJob.id == job_id).first()
+    if not job or job.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    return job
