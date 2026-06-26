@@ -1,8 +1,17 @@
+# pyrefly: ignore [missing-import]
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, Text
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship
+# pyrefly: ignore [missing-import]
 from sqlalchemy.sql import func
+# pyrefly: ignore [missing-import]
 from database import Base
 
+
+
+# HERE USER CLASS COME FROM database.py which is imported from Base
+# this file is the model of the database where entities are defined
+# and their relationships are defined
 class User(Base):
     __tablename__ = "users"
     id            = Column(Integer, primary_key=True, index=True)
