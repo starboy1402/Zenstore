@@ -21,3 +21,26 @@ class UserResponse(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+# --- PRODUCT SCHEMAS ---
+
+# What we expect the user to send when creating a product
+class ProductCreate(BaseModel):
+    name: str
+    price: float
+    stock: int
+    raw_description: Optional[str] = None
+
+# What we send back to the user when they request their products
+class ProductResponse(BaseModel):
+    id: int
+    name: str
+    price: float
+    stock: int
+    raw_description: Optional[str]
+    ai_description: Optional[str]
+    category: Optional[str]
+    status: str
+
+    class Config:
+        from_attributes = True

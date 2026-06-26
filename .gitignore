@@ -3,3 +3,6 @@ __pycache__/
 *.db
 .env
 .vscode/
+data.txt
+SYSTEM_ARCHITECTURE.md
+implementation_plan.md
