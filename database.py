@@ -10,6 +10,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./zenstore.db"
 # engine here is used to connect to the database
 # sessionlocal is used to create a session to interact with the database
 # base here is used to create a base class for all our models
+
 # check same thread is used to check the same thread for sqlite 
 # it helps to run multiple requests at the same time
 
@@ -17,6 +18,10 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./zenstore.db"
 # autoflush=False means that we need to flush the changes manually
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# check_same_thread is false because it helps to run multiple requests at the same time if it is true it will throw error because sqlite is not thread safe 
+# if we used postgresql we would not need check_same_thread=False
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # All our models will inherit from this Base class
