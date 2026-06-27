@@ -1,4 +1,3 @@
-# pyrefly: ignore [missing-import]
 import streamlit as st
 import requests
 import time
@@ -43,21 +42,38 @@ with st.sidebar:
     st.title("🔐 Authentication")
     
     if st.session_state.token is None:
-        st.write("Please log in to manage your store.")
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
+        auth_mode = st.radio("Choose Action", ["Login", "Register"])
         
-        if st.button("Login"):
-            with st.spinner("Authenticating..."):
-                data = {"username": email, "password": password}
-                res = requests.post(f"{API_URL}/auth/login", data=data)
-                
-                if res.status_code == 200:
-                    st.session_state.token = res.json()["access_token"]
-                    st.success("Login successful!")
-                    st.rerun()
-                else:
-                    st.error("Invalid credentials.")
+        if auth_mode == "Login":
+            st.write("Log in to your store.")
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            
+            if st.button("Login"):
+                with st.spinner("Authenticating..."):
+                    data = {"username": email, "password": password}
+                    res = requests.post(f"{API_URL}/auth/login", data=data)
+                    if res.status_code == 200:
+                        st.session_state.token = res.json()["access_token"]
+                        st.success("Login successful!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials.")
+                        
+        else:
+            st.write("Create a new account.")
+            new_name = st.text_input("Full Name")
+            new_email = st.text_input("Email")
+            new_password = st.text_input("Password", type="password")
+            
+            if st.button("Register"):
+                with st.spinner("Creating account..."):
+                    payload = {"email": new_email, "password": new_password, "full_name": new_name}
+                    res = requests.post(f"{API_URL}/auth/register", json=payload)
+                    if res.status_code == 201:
+                        st.success("Account created! Please switch to Login.")
+                    else:
+                        st.error(f"Registration failed: {res.text}")
     else:
         st.success("✅ Logged In")
         if st.button("Logout"):
@@ -68,7 +84,7 @@ with st.sidebar:
 st.title("🛒 ZenStore Admin Dashboard")
 
 if st.session_state.token is None:
-    st.info("👈 Please log in using the sidebar to view your dashboard.")
+    st.info("👈 Please log in or register using the sidebar to view your dashboard.")
 else:
     # --- TOP ACTIONS ---
     col1, col2 = st.columns(2)
@@ -132,15 +148,12 @@ else:
                     st.subheader(product["name"])
                     st.write(f"**Price:** ${product['price']} | **Stock:** {product['stock']}")
                     
-                    # --- NEW: IMAGE HANDLING ---
                     if product.get("image_path"):
-                        # Render the actual image from the hard drive!
                         try:
                             st.image(product["image_path"], use_container_width=True)
                         except Exception:
                             st.caption(f"🖼️ Image attached: {product['image_metadata']['original_name']}")
                     else:
-                        # Image Uploader Form
                         img_upload = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"], key=f"img_{product['id']}")
                         if img_upload:
                             if st.button("Save Image", key=f"save_img_{product['id']}"):
@@ -154,7 +167,6 @@ else:
                                     else:
                                         st.error("Failed to save image.")
                     
-                    # --- AI STATUS HANDLING ---
                     st.markdown("---")
                     status = product["status"]
                     if status == "ready":

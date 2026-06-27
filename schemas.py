@@ -2,6 +2,10 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
+#BaseModel is used here to define the structure of data that comes in and goes out of the API
+#BaseModel in python is a schema for data validation and serialization
+
+
 # This is what we expect the user to send us when they register
 class UserCreate(BaseModel):
     email: EmailStr
@@ -46,3 +50,7 @@ class ProductResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+#config class here is used for configuring the model to allow it to read data from any source that has a __dict__ attribute
+#because without config class it will not be able to read the data from the database
+#which is exactly what we need because our models are in the database and we need to return them as response

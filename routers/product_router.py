@@ -54,10 +54,10 @@ def list_products(db: Session = Depends(get_db), current_user: models.User = Dep
     # Check the cache first! (Constraint 3)
     cached_data = get_cache(cache_key)
     if cached_data:
-        print("⚡ Cache HIT! Returning fast data.")
+        print(" Cache HIT! Returning fast data.")
         return cached_data
         
-    print("🐌 Cache MISS! Fetching from Database...")
+    print(" Cache MISS! Fetching from Database...")
     products = db.query(models.Product).filter(models.Product.owner_id == current_user.id).all()
     
     # Save the data to the cache for next time
