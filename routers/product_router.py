@@ -128,3 +128,35 @@ def get_batch_job_status(job_id: int, db: Session = Depends(get_db), current_use
         raise HTTPException(status_code=404, detail="Job not found")
         
     return job
+
+# 6. TRIGGER AI FOR PENDING PRODUCT
+@router.post("/{product_id}/generate-ai")
+@time_logger
+def trigger_ai_generation(
+    product_id: int, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    # 1. Grab the product
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    
+    # 2. Security Check
+    if not product or product.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Product not found")
+        
+    # 3. Validation Check
+    if product.status == "ready":
+        raise HTTPException(status_code=400, detail="Product already has an AI description")
+        
+    # 4. Update status and trigger worker
+    product.status = "processing"
+    db.commit()
+    
+    # Invalidate cache so they see the "processing" status immediately
+    invalidate_cache(f"products_{current_user.id}")
+    
+    # Trigger AI
+    background_tasks.add_task(ai_service.generate_product_details, db, product.id)
+    
+    return {"message": "AI generation started", "status": "processing"}

@@ -3,11 +3,14 @@ import uuid
 from io import BytesIO
 # pyrefly: ignore [missing-import]
 from PIL import Image
+# pyrefly: ignore [missing-import]
+from decorators import time_logger
 
 # We will create an 'uploads' folder safely inside our project
 UPLOAD_DIR = "uploads/images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@time_logger
 def process_and_save_image(file_bytes: bytes, filename: str) -> dict:
     """Compresses the image and saves it securely to disk"""
     

@@ -8,7 +8,10 @@ from sqlalchemy.orm import Session
 import models
 # pyrefly: ignore [missing-import]
 from cache import invalidate_cache
+# pyrefly: ignore [missing-import]
+from decorators import time_logger
 
+@time_logger
 def process_csv_upload(filepath: str, job_id: int, user_id: int, db: Session):
     """Runs in the background, reading the CSV line by line"""
     

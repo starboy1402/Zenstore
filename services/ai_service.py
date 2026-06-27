@@ -3,7 +3,12 @@ import asyncio
 # pyrefly: ignore [missing-import]
 from groq import Groq
 import models
+# pyrefly: ignore [missing-import]
+from cache import invalidate_cache
+# pyrefly: ignore [missing-import]
+from decorators import time_logger
 
+@time_logger
 async def generate_product_details(db, product_id: int):
     """This function will run in the background so the user doesn't have to wait!"""
     
