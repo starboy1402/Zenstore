@@ -20,6 +20,11 @@ class User(Base):
     full_name     = Column(String, nullable=False)
     created_at    = Column(DateTime, default=func.now())
     products      = relationship("Product", back_populates="owner")
+    # here relationship means one user can have many products
+    # back_populates means that the products will have a back_populates to the owner
+    # owner_id is the foreign key of the products table
+    # nullable=False means that the owner_id cannot be null
+    
 
 class Product(Base):
     __tablename__ = "products"
