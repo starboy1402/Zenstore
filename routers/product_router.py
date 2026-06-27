@@ -41,7 +41,7 @@ def create_product(product: schemas.ProductCreate, background_tasks: BackgroundT
     invalidate_cache(f"products_{current_user.id}")
     
     # Send the AI generation to the background!
-    background_tasks.add_task(ai_service.generate_product_details, db, new_product.id)
+    background_tasks.add_task(ai_service.generate_product_details, new_product.id)
     
     return new_product
 
@@ -116,7 +116,7 @@ def upload_products_csv(
     db.refresh(job)
     
     # 3. Send the slow parsing task to the background!
-    background_tasks.add_task(csv_service.process_csv_upload, filepath, job.id, current_user.id, db)
+    background_tasks.add_task(csv_service.process_csv_upload, filepath, job.id, current_user.id)
     
     return {"message": "Upload started", "job_id": job.id}
 
@@ -157,6 +157,7 @@ def trigger_ai_generation(
     invalidate_cache(f"products_{current_user.id}")
     
     # Trigger AI
-    background_tasks.add_task(ai_service.generate_product_details, db, product.id)
+    # No db passed in!
+    background_tasks.add_task(ai_service.generate_product_details, product.id)
     
     return {"message": "AI generation started", "status": "processing"}
