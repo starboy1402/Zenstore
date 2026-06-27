@@ -9,7 +9,6 @@ API_URL = "http://127.0.0.1:8000"
 # --- Styling & Config ---
 st.set_page_config(page_title="ZenStore Admin", page_icon="🛒", layout="wide")
 
-# Custom CSS for aesthetics
 st.markdown("""
     <style>
     .product-card {
@@ -50,7 +49,6 @@ with st.sidebar:
         
         if st.button("Login"):
             with st.spinner("Authenticating..."):
-                # Swagger UI expects form data (username, password)
                 data = {"username": email, "password": password}
                 res = requests.post(f"{API_URL}/auth/login", data=data)
                 
@@ -72,21 +70,47 @@ st.title("🛒 ZenStore Admin Dashboard")
 if st.session_state.token is None:
     st.info("👈 Please log in using the sidebar to view your dashboard.")
 else:
-    # --- Bulk Upload Section ---
-    st.markdown("### 📤 Bulk Upload CSV")
-    uploaded_file = st.file_uploader("Drag and drop a CSV file to add products in bulk", type=["csv"])
-    if uploaded_file is not None:
-        if st.button("Upload CSV"):
-            with st.spinner("Uploading..."):
-                files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "text/csv")}
-                res = requests.post(f"{API_URL}/products/bulk-upload", headers=get_headers(), files=files)
-                if res.status_code == 202:
-                    job_id = res.json()["job_id"]
-                    st.success(f"Upload accepted! Background Job ID: {job_id}")
-                    time.sleep(2) # Give it a second to process
-                    st.rerun()
-                else:
-                    st.error("Upload failed.")
+    # --- TOP ACTIONS ---
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### ➕ Add Single Product")
+        with st.expander("Click to add a single product"):
+            with st.form("single_product_form"):
+                new_name = st.text_input("Product Name")
+                new_price = st.number_input("Price ($)", min_value=0.0, format="%.2f")
+                new_stock = st.number_input("Stock Quantity", min_value=0, step=1)
+                new_desc = st.text_area("Raw Description")
+                
+                if st.form_submit_button("Create Product"):
+                    payload = {
+                        "name": new_name,
+                        "price": new_price,
+                        "stock": new_stock,
+                        "raw_description": new_desc
+                    }
+                    res = requests.post(f"{API_URL}/products/", json=payload, headers=get_headers())
+                    if res.status_code == 201:
+                        st.success("Product created! Generating AI description in background...")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Failed to create product.")
+                        
+    with col2:
+        st.markdown("### 📤 Bulk Upload CSV")
+        with st.expander("Click to upload a CSV file"):
+            uploaded_csv = st.file_uploader("Drag and drop a CSV file", type=["csv"])
+            if uploaded_csv is not None:
+                if st.button("Upload CSV"):
+                    files = {"file": (uploaded_csv.name, uploaded_csv.getvalue(), "text/csv")}
+                    res = requests.post(f"{API_URL}/products/bulk-upload", headers=get_headers(), files=files)
+                    if res.status_code == 202:
+                        st.success(f"Upload accepted! Background Job ID: {res.json()['job_id']}")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Upload failed.")
 
     st.markdown("---")
     
@@ -97,11 +121,9 @@ else:
     if not products:
         st.write("You don't have any products yet.")
     else:
-        # Create a dynamic grid (3 columns wide)
         cols = st.columns(3)
-        
         for index, product in enumerate(products):
-            col = cols[index % 3] # Cycle through the 3 columns
+            col = cols[index % 3] 
             
             with col:
                 with st.container():
@@ -110,14 +132,30 @@ else:
                     st.subheader(product["name"])
                     st.write(f"**Price:** ${product['price']} | **Stock:** {product['stock']}")
                     
-                    # Display Image if exists
+                    # --- NEW: IMAGE HANDLING ---
                     if product.get("image_path"):
-                        # We have to fetch the image from the API or construct a URL. 
-                        # Wait, FastAPI needs to serve static files to render the image directly.
-                        # For now, we will just show the metadata.
-                        st.caption(f"🖼️ Image attached: {product['image_metadata']['original_name']}")
+                        # Render the actual image from the hard drive!
+                        try:
+                            st.image(product["image_path"], use_container_width=True)
+                        except Exception:
+                            st.caption(f"🖼️ Image attached: {product['image_metadata']['original_name']}")
+                    else:
+                        # Image Uploader Form
+                        img_upload = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"], key=f"img_{product['id']}")
+                        if img_upload:
+                            if st.button("Save Image", key=f"save_img_{product['id']}"):
+                                with st.spinner("Compressing with Pillow..."):
+                                    files = {"file": (img_upload.name, img_upload.getvalue(), "image/jpeg")}
+                                    res = requests.post(f"{API_URL}/products/{product['id']}/image", headers=get_headers(), files=files)
+                                    if res.status_code == 200:
+                                        st.success("Image saved!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to save image.")
                     
-                    # Display Status and AI
+                    # --- AI STATUS HANDLING ---
+                    st.markdown("---")
                     status = product["status"]
                     if status == "ready":
                         st.markdown(f"Status: <span class='status-ready'>READY</span>", unsafe_allow_html=True)
@@ -127,20 +165,19 @@ else:
                         st.markdown(f"Status: <span class='status-pending'>{status.upper()}</span>", unsafe_allow_html=True)
                         st.warning("No AI description generated yet.")
                         
-                        # THE MAGIC BUTTON
                         if st.button("✨ Generate AI Description", key=f"ai_btn_{product['id']}"):
                             with st.spinner("Telling Llama-3.1 to write magic..."):
                                 res = requests.post(f"{API_URL}/products/{product['id']}/generate-ai", headers=get_headers())
                                 if res.status_code == 200:
                                     st.success("AI Generation Started! Check back in 3 seconds.")
-                                    time.sleep(3) # Wait for the background task
+                                    time.sleep(3)
                                     st.rerun()
                                 else:
                                     st.error(f"Failed to start AI: {res.json()}")
                     
                     elif status == "ai_failed":
                         st.markdown(f"Status: <span class='status-failed'>FAILED</span>", unsafe_allow_html=True)
-                        st.error("The AI failed to generate a description. Groq might be down.")
+                        st.error("The AI failed to generate a description.")
                         if st.button("🔄 Retry AI", key=f"retry_btn_{product['id']}"):
                             requests.post(f"{API_URL}/products/{product['id']}/generate-ai", headers=get_headers())
                             st.rerun()
